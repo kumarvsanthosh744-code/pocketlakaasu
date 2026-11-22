@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta name="google-site-verification" content="tpGRg__xeH-UTOy72pW7MKnBTlCndgE6HbRd7FF8ueI" />
+  <link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#6d28d9" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pocket La MOney — Kinetic Motion Expense Studio</title>
@@ -969,6 +971,9 @@
     }
 
     syncFromBackend();
+    if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
   </script>
 </body>
 </html>
