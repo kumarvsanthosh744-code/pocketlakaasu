@@ -973,6 +973,25 @@
     syncFromBackend();
     if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
+}// 1. Get or create a unique ID for this specific phone/browser
+function getDeviceId() {
+  let id = localStorage.getItem("pocketlakaasu_device_id");
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : "dev_" + Date.now() + "_" + Math.random().toString(36).slice(2));
+    localStorage.setItem("pocketlakaasu_device_id", id);
+  }
+  return id;
+}
+
+const DEVICE_ID = getDeviceId();
+
+// 2. Helper to pass X-Device-Id header on every fetch() call
+function apiFetch(url, options = {}) {
+  const headers = {
+    ...(options.headers || {}),
+    "X-Device-Id": DEVICE_ID
+  };
+  return fetch(url, { ...options, headers });
 }
   </script>
 </body>

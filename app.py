@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from datetime import date, datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -132,3 +132,9 @@ def delete_expense(expense_id: int):
     with get_db() as conn:
         conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
     return {"ok": True}
+    from fastapi import Header, HTTPException
+
+def require_device_id(x_device_id: str | None = Header(default=None)) -> str:
+    if not x_device_id or not x_device_id.strip():
+        raise HTTPException(status_code=400, detail="Missing X-Device-Id header")
+    return x_device_id.strip()
