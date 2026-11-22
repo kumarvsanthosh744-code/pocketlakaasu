@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from datetime import date, datetime
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_PATH = os.path.join(BASE_DIR, "index.html")
 DB_PATH = os.path.join(BASE_DIR, "fintrack.db")
 
-app = FastAPI(title="Expense Tracker Full-Stack App")
+app = FastAPI(title="PocketLakaasu Expense Tracker")
 
 
 def get_db():
@@ -20,20 +20,23 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
+        # Check if old single-user settings table exists without device_id
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(settings)").fetchall()]
+        if cols and "device_id" not in cols:
+            conn.execute("DROP TABLE settings")
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS settings (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
+                device_id TEXT PRIMARY KEY,
                 monthly_income REAL NOT NULL DEFAULT 6000.0,
                 savings_goal REAL NOT NULL DEFAULT 1500.0
             );
         """)
-        conn.execute("""
-            INSERT OR IGNORE INTO settings (id, monthly_income, savings_goal)
-            VALUES (1, 6000.0, 1500.0);
-        """)
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS expenses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL DEFAULT 'legacy',
                 item TEXT NOT NULL,
                 category TEXT NOT NULL,
                 amount REAL NOT NULL CHECK(amount > 0),
@@ -42,8 +45,18 @@ def init_db():
             );
         """)
 
+        exp_cols = [r["name"] for r in conn.execute("PRAGMA table_info(expenses)").fetchall()]
+        if "device_id" not in exp_cols:
+            conn.execute("ALTER TABLE expenses ADD COLUMN device_id TEXT NOT NULL DEFAULT 'legacy'")
+
 
 init_db()
+
+
+def require_device_id(x_device_id: str | None = Header(default=None)) -> str:
+    if not x_device_id or not x_device_id.strip():
+        raise HTTPException(status_code=400, detail="Missing X-Device-Id header")
+    return x_device_id.strip()[:120]
 
 
 def sanitize_text(text: str) -> str:
@@ -73,13 +86,30 @@ def serve_frontend():
 
 
 @app.get("/api/state")
-def get_state():
+def get_state(device_id: str = Depends(require_device_id)):
     with get_db() as conn:
-        cfg = conn.execute("SELECT monthly_income, savings_goal FROM settings WHERE id = 1").fetchone()
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO settings (device_id, monthly_income, savings_goal)
+            VALUES (?, 6000.0, 1500.0)
+            """,
+            (device_id,),
+        )
+        cfg = conn.execute(
+            "SELECT monthly_income, savings_goal FROM settings WHERE device_id = ?",
+            (device_id,),
+        ).fetchone()
         rows = conn.execute(
-            "SELECT id, item, category, amount, exp_date FROM expenses ORDER BY exp_date DESC, id DESC"
+            """
+            SELECT id, item, category, amount, exp_date
+            FROM expenses
+            WHERE device_id = ?
+            ORDER BY exp_date DESC, id DESC
+            """,
+            (device_id,),
         ).fetchall()
     return {
+        "device_id": device_id,
         "income": cfg["monthly_income"],
         "goal": cfg["savings_goal"],
         "expenses": [dict(r) for r in rows],
@@ -87,18 +117,24 @@ def get_state():
 
 
 @app.put("/api/settings")
-def update_settings(payload: SettingsIn):
+def update_settings(payload: SettingsIn, device_id: str = Depends(require_device_id)):
     safe_goal = min(payload.savings_goal, payload.monthly_income)
     with get_db() as conn:
         conn.execute(
-            "UPDATE settings SET monthly_income = ?, savings_goal = ? WHERE id = 1",
-            (float(payload.monthly_income), float(safe_goal)),
+            """
+            INSERT INTO settings (device_id, monthly_income, savings_goal)
+            VALUES (?, ?, ?)
+            ON CONFLICT(device_id) DO UPDATE SET
+                monthly_income = excluded.monthly_income,
+                savings_goal = excluded.savings_goal
+            """,
+            (device_id, float(payload.monthly_income), float(safe_goal)),
         )
     return {"ok": True, "income": float(payload.monthly_income), "goal": float(safe_goal)}
 
 
 @app.post("/api/expenses")
-def create_expense(payload: ExpenseIn):
+def create_expense(payload: ExpenseIn, device_id: str = Depends(require_device_id)):
     clean_item = sanitize_text(payload.item)
     if not clean_item:
         raise HTTPException(status_code=400, detail="Invalid item name.")
@@ -112,10 +148,11 @@ def create_expense(payload: ExpenseIn):
     with get_db() as conn:
         cur = conn.execute(
             """
-            INSERT INTO expenses (item, category, amount, exp_date, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO expenses (device_id, item, category, amount, exp_date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
+                device_id,
                 clean_item,
                 payload.category[:60],
                 round(float(payload.amount), 2),
@@ -128,13 +165,10 @@ def create_expense(payload: ExpenseIn):
 
 
 @app.delete("/api/expenses/{expense_id}")
-def delete_expense(expense_id: int):
+def delete_expense(expense_id: int, device_id: str = Depends(require_device_id)):
     with get_db() as conn:
-        conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+        conn.execute(
+            "DELETE FROM expenses WHERE id = ? AND device_id = ?",
+            (expense_id, device_id),
+        )
     return {"ok": True}
-    from fastapi import Header, HTTPException
-
-def require_device_id(x_device_id: str | None = Header(default=None)) -> str:
-    if not x_device_id or not x_device_id.strip():
-        raise HTTPException(status_code=400, detail="Missing X-Device-Id header")
-    return x_device_id.strip()

@@ -3,10 +3,10 @@
 <head>
   <meta name="google-site-verification" content="tpGRg__xeH-UTOy72pW7MKnBTlCndgE6HbRd7FF8ueI" />
   <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#6d28d9" />
+  <meta name="theme-color" content="#6d28d9" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pocket La MOney — Kinetic Motion Expense Studio</title>
+  <title>PocketLakaasu — Kinetic Motion Expense Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
@@ -33,15 +33,13 @@
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background:
-        linear-gradient(135deg, #fff1eb 0%, #eef2ff 48%, #e6fffb 100%);
+      background: linear-gradient(135deg, #fff1eb 0%, #eef2ff 48%, #e6fffb 100%);
       color: var(--ink);
       min-height: 100vh;
       overflow-x: hidden;
       position: relative;
     }
 
-    /* Vibrant Animated Mesh & Moving Dot Matrix */
     .kinetic-stage {
       position: fixed;
       inset: 0;
@@ -116,7 +114,6 @@
       100% { transform: translate(-35%, -62%) scale(1.14); }
     }
 
-    /* Moving SVG Wave Ribbon */
     .wave-band {
       position: fixed;
       left: 0;
@@ -554,8 +551,8 @@
       <div class="brand">
         <div class="logo-tile">P</div>
         <div>
-          <h1>Pocket La MOney</h1>
-          <p id="syncStatus">Connecting to Python SQLite API...</p>
+          <h1>PocketLakaasu</h1>
+          <p id="syncStatus">Connecting to personal device storage...</p>
         </div>
       </div>
 
@@ -572,7 +569,7 @@
     <section class="hero motion-card">
       <div>
         <h2>Turn daily spends into <span class="grad-text">kinetic momentum.</span></h2>
-        <p>Live SVG motion waves, reactive cards, and instant SQLite sync with every tap.</p>
+        <p>Live SVG motion waves, reactive cards, and private per-device storage with every tap.</p>
         <div class="spark-wrap">
           <span>Recent Spend Motion</span>
           <svg id="sparkSvg" width="170" height="30" viewBox="0 0 170 30">
@@ -682,8 +679,28 @@
   </div>
 
   <script>
-    const LOCAL_KEY = "Pocket La MOney_api_cache_v1";
+    function getDeviceId() {
+      let id = localStorage.getItem("pocketlakaasu_device_id");
+      if (!id) {
+        id = (crypto.randomUUID
+          ? crypto.randomUUID()
+          : "dev_" + Date.now() + "_" + Math.random().toString(36).slice(2));
+        localStorage.setItem("pocketlakaasu_device_id", id);
+      }
+      return id;
+    }
+
+    const DEVICE_ID = getDeviceId();
+    const LOCAL_KEY = `pocketlakaasu_cache_${DEVICE_ID}`;
     const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+
+    function apiFetch(url, options = {}) {
+      const headers = {
+        ...(options.headers || {}),
+        "X-Device-Id": DEVICE_ID
+      };
+      return fetch(url, { ...options, headers });
+    }
 
     function showToast(msg) {
       const el = document.getElementById("toastPill");
@@ -744,7 +761,7 @@
 
     async function syncFromBackend() {
       try {
-        const res = await fetch(`${API_BASE}/api/state`);
+        const res = await apiFetch(`${API_BASE}/api/state`);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
         state = {
@@ -755,12 +772,12 @@
         incomeInput.value = state.income;
         goalInput.value = state.goal;
         saveCache();
-        syncStatus.textContent = "Connected to Python + SQLite (fintrack.db)";
+        syncStatus.textContent = `Private Device Storage • ID ${DEVICE_ID.slice(0, 8)}`;
         render();
       } catch (_) {
         incomeInput.value = state.income;
         goalInput.value = state.goal;
-        syncStatus.textContent = "Offline mode (run uvicorn app:app --reload for SQLite)";
+        syncStatus.textContent = `Local Device Storage • ID ${DEVICE_ID.slice(0, 8)}`;
         render();
       }
     }
@@ -773,12 +790,12 @@
       saveCache();
       render();
       try {
-        await fetch(`${API_BASE}/api/settings`, {
+        await apiFetch(`${API_BASE}/api/settings`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ monthly_income: inc, savings_goal: gol })
         });
-        showToast("Budget targets saved");
+        showToast("Your budget targets saved");
       } catch (_) {}
     }
 
@@ -795,7 +812,7 @@
       };
 
       try {
-        const res = await fetch(`${API_BASE}/api/expenses`, {
+        const res = await apiFetch(`${API_BASE}/api/expenses`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -817,7 +834,7 @@
 
     window.deleteTx = async (id) => {
       try {
-        const res = await fetch(`${API_BASE}/api/expenses/${id}`, { method: "DELETE" });
+        const res = await apiFetch(`${API_BASE}/api/expenses/${id}`, { method: "DELETE" });
         if (res.ok) {
           await syncFromBackend();
           showToast("Transaction removed");
@@ -963,7 +980,7 @@
             </div>
             <div class="tx-right">
               <span class="tx-amt">₹${Number(e.amount).toLocaleString("en-IN")}</span>
-              <button class="del-btn" onclick="deleteTx('${e.id}')">Delete</button>
+              <button class="btn-del" onclick="deleteTx('${e.id}')">Delete</button>
             </div>
           </div>
         `).join("");
@@ -972,27 +989,8 @@
 
     syncFromBackend();
     if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {});
-}// 1. Get or create a unique ID for this specific phone/browser
-function getDeviceId() {
-  let id = localStorage.getItem("pocketlakaasu_device_id");
-  if (!id) {
-    id = (crypto.randomUUID ? crypto.randomUUID() : "dev_" + Date.now() + "_" + Math.random().toString(36).slice(2));
-    localStorage.setItem("pocketlakaasu_device_id", id);
-  }
-  return id;
-}
-
-const DEVICE_ID = getDeviceId();
-
-// 2. Helper to pass X-Device-Id header on every fetch() call
-function apiFetch(url, options = {}) {
-  const headers = {
-    ...(options.headers || {}),
-    "X-Device-Id": DEVICE_ID
-  };
-  return fetch(url, { ...options, headers });
-}
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
   </script>
 </body>
 </html>
