@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pocket La MOney — Kinetic Motion Expense Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #eef2ff;
+      --surface: rgba(255, 255, 255, 0.90);
+      --surface-solid: #ffffff;
+      --surface-2: #f8fafc;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: rgba(15, 23, 42, 0.09);
+      --coral: #ff5a36;
+      --violet: #6d28d9;
+      --cyan: #0891b2;
+      --mint: #059669;
+      --amber: #d97706;
+      --danger: #dc2626;
+      --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --smooth: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background:
+        linear-gradient(135deg, #fff1eb 0%, #eef2ff 48%, #e6fffb 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Vibrant Animated Mesh & Moving Dot Matrix */
+    .kinetic-stage {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .dot-grid {
+      position: absolute;
+      inset: -40px;
+      background-image: radial-gradient(rgba(79, 70, 229, 0.16) 1.25px, transparent 1.25px);
+      background-size: 26px 26px;
+      animation: dotGlide 20s linear infinite;
+    }
+
+    @keyframes dotGlide {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(26px, 26px); }
+    }
+
+    .aurora-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(72px);
+      opacity: 0.52;
+      will-change: transform;
+    }
+
+    .orb-1 {
+      width: 440px;
+      height: 440px;
+      background: radial-gradient(circle, #ff6b4a 0%, #fbbf24 68%, transparent 100%);
+      top: -110px;
+      left: -80px;
+      animation: swirlA 13s ease-in-out infinite alternate;
+    }
+
+    .orb-2 {
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, #7c3aed 0%, #22d3ee 72%, transparent 100%);
+      bottom: -130px;
+      right: -90px;
+      animation: swirlB 16s ease-in-out infinite alternate;
+    }
+
+    .orb-3 {
+      width: 340px;
+      height: 340px;
+      background: radial-gradient(circle, #ec4899 0%, #a855f7 68%, transparent 100%);
+      top: 34%;
+      left: 50%;
+      opacity: 0.30;
+      animation: swirlC 11s ease-in-out infinite alternate;
+    }
+
+    @keyframes swirlA {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { transform: translate(60px, -28px) scale(1.12) rotate(12deg); }
+      100% { transform: translate(-25px, 45px) scale(0.96) rotate(-10deg); }
+    }
+
+    @keyframes swirlB {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-65px, -35px) scale(1.1); }
+      100% { transform: translate(35px, 30px) scale(0.95); }
+    }
+
+    @keyframes swirlC {
+      0% { transform: translate(-50%, -50%) scale(0.92); }
+      100% { transform: translate(-35%, -62%) scale(1.14); }
+    }
+
+    /* Moving SVG Wave Ribbon */
+    .wave-band {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 120px;
+      z-index: -1;
+      opacity: 0.42;
+      pointer-events: none;
+    }
+
+    .wave-path {
+      animation: waveShift 9s ease-in-out infinite alternate;
+      transform-origin: center;
+    }
+
+    @keyframes waveShift {
+      0% { transform: translateX(-24px) scaleY(0.92); }
+      100% { transform: translateX(24px) scaleY(1.08); }
+    }
+
+    @keyframes enterCard {
+      from { opacity: 0; transform: translateY(16px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .wrap {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 24px 20px 76px;
+      animation: enterCard 0.55s var(--smooth);
+    }
+
+    header.top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+
+    .logo-tile {
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, var(--coral), var(--violet), var(--cyan));
+      background-size: 200% 200%;
+      animation: gradientFlow 6s ease infinite;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1.3rem;
+      box-shadow: 0 10px 24px rgba(109, 40, 217, 0.25);
+      transition: transform 0.35s var(--spring);
+    }
+
+    .logo-tile:hover { transform: rotate(-12deg) scale(1.1); }
+
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .brand h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.48rem; }
+    .brand p { font-size: 0.8rem; color: var(--muted); }
+
+    .budget-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+    }
+
+    .budget-controls label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .budget-controls input {
+      width: 94px;
+      padding: 6px 9px;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--ink);
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.2s ease, transform 0.2s var(--spring);
+    }
+
+    .budget-controls input:focus {
+      border-color: var(--violet);
+      transform: scale(1.03);
+    }
+
+    .motion-card {
+      position: relative;
+      background: var(--surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+      transition: transform 0.28s var(--spring), box-shadow 0.28s ease, border-color 0.25s ease;
+      transform-style: preserve-3d;
+      overflow: hidden;
+    }
+
+    .motion-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        340px circle at var(--mx, 50%) var(--my, 50%),
+        rgba(255, 90, 54, 0.12),
+        rgba(109, 40, 217, 0.07) 45%,
+        transparent 75%
+      );
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+
+    .motion-card:hover::before { opacity: 1; }
+    .motion-card:hover {
+      border-color: rgba(109, 40, 217, 0.25);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.10);
+    }
+
+    .hero {
+      padding: 26px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 20px;
+      align-items: center;
+      background: linear-gradient(125deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 244, 238, 0.94) 50%, rgba(237, 242, 255, 0.94) 100%);
+    }
+
+    .hero h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.5rem, 2.9vw, 2.15rem);
+      line-height: 1.14;
+      margin-bottom: 8px;
+    }
+
+    .grad-text {
+      background: linear-gradient(90deg, var(--coral), var(--violet), var(--cyan), var(--coral));
+      background-size: 250% 250%;
+      animation: gradientFlow 5s ease infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p { color: var(--muted); font-size: 0.94rem; line-height: 1.5; margin-bottom: 12px; }
+
+    .spark-wrap {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .spark-wrap span { font-size: 0.75rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+    .pulse-panel {
+      background: var(--surface-solid);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .pulse-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .pulse-kicker { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 800; }
+
+    .pulse-badge {
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(5, 150, 105, 0.12);
+      color: var(--mint);
+      animation: gentleBeat 2.4s ease-in-out infinite;
+    }
+
+    @keyframes gentleBeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    .pulse-val { font-family: 'Space Grotesk', sans-serif; font-size: 1.35rem; font-weight: 700; margin-bottom: 10px; }
+
+    .rail { height: 10px; background: rgba(15, 23, 42, 0.08); border-radius: 999px; overflow: hidden; }
+    .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--mint), var(--amber), var(--coral));
+      transition: width 0.7s var(--smooth);
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .kpi { padding: 18px; }
+    .kpi:hover { transform: translateY(-5px) scale(1.015); }
+    .kpi .k-lbl { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    .kpi .k-val { font-family: 'Space Grotesk', sans-serif; font-size: 1.62rem; font-weight: 700; }
+    .kpi .k-sub { font-size: 0.78rem; color: var(--mint); margin-top: 6px; font-weight: 600; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+
+    .chip {
+      background: var(--surface-solid);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 9px 15px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      transition: transform 0.25s var(--spring), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .chip:hover {
+      transform: translateY(-3px) scale(1.04);
+      border-color: var(--coral);
+      background: #fff8f6;
+      box-shadow: 0 10px 20px rgba(255, 90, 54, 0.16);
+    }
+
+    .chip:active { transform: scale(0.94); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .card { padding: 20px; }
+    .card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.12rem; margin-bottom: 14px; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+
+    .field input, .field select {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px 12px;
+      border-radius: 11px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--violet);
+      box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.12);
+    }
+
+    .btn-go {
+      margin-top: 12px;
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 13px;
+      background: linear-gradient(90deg, var(--coral), var(--violet), var(--cyan));
+      background-size: 220% 220%;
+      animation: gradientFlow 5s ease infinite;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.94rem;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(109, 40, 217, 0.24);
+      transition: transform 0.25s var(--spring), filter 0.2s ease;
+    }
+
+    .btn-go:hover { transform: translateY(-2px) scale(1.01); filter: brightness(1.05); }
+    .btn-go:active { transform: scale(0.97); }
+
+    .sim-box {
+      background: linear-gradient(120deg, rgba(5, 150, 105, 0.10), rgba(8, 145, 178, 0.10));
+      border: 1px solid rgba(5, 150, 105, 0.24);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .sim-box input[type="range"] {
+      width: 100%;
+      accent-color: var(--violet);
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    .cat-row { margin-bottom: 11px; }
+    .cat-top { display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 4px; }
+    .cat-rail { height: 8px; background: rgba(15, 23, 42, 0.08); border-radius: 999px; overflow: hidden; }
+    .cat-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--coral), var(--violet));
+      border-radius: 999px;
+      transition: width 0.65s var(--smooth);
+    }
+
+    .tx-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .tx-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .tx-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      padding: 11px 14px;
+      border-radius: 13px;
+      animation: enterCard 0.32s var(--spring);
+      transition: transform 0.22s var(--spring), border-color 0.2s ease;
+    }
+
+    .tx-row:hover { transform: translateX(4px); border-color: rgba(109, 40, 217, 0.25); }
+    .tx-row strong { display: block; font-size: 0.9rem; }
+    .tx-row small { color: var(--muted); font-size: 0.76rem; }
+
+    .tx-right { display: flex; align-items: center; gap: 10px; }
+    .tx-amt { font-weight: 800; color: var(--violet); }
+
+    .btn-del {
+      background: rgba(220, 38, 38, 0.09);
+      color: var(--danger);
+      border: 1px solid rgba(220, 38, 38, 0.22);
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s var(--spring), background 0.2s ease;
+    }
+
+    .btn-del:hover { background: rgba(220, 38, 38, 0.16); transform: scale(1.06); }
+
+    .toast-pill {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 50;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 11px 16px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.25);
+      transform: translateY(24px) scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.35s var(--spring), opacity 0.25s ease;
+    }
+
+    .toast-pill.show {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    @media (max-width: 860px) {
+      .hero, .grid-2 { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 520px) {
+      .kpis, .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="kinetic-stage">
+    <div class="dot-grid"></div>
+    <div class="aurora-orb orb-1"></div>
+    <div class="aurora-orb orb-2"></div>
+    <div class="aurora-orb orb-3"></div>
+  </div>
+
+  <svg class="wave-band" viewBox="0 0 1440 160" preserveAspectRatio="none">
+    <path class="wave-path" fill="url(#waveGrad)" d="M0,64 C240,130 480,0 720,64 C960,128 1200,16 1440,64 L1440,160 L0,160 Z"></path>
+    <defs>
+      <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#ff5a36" />
+        <stop offset="50%" stop-color="#6d28d9" />
+        <stop offset="100%" stop-color="#0891b2" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="toast-pill" id="toastPill">Synced</div>
+
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="logo-tile">P</div>
+        <div>
+          <h1>Pocket La MOney</h1>
+          <p id="syncStatus">Connecting to Python SQLite API...</p>
+        </div>
+      </div>
+
+      <div class="budget-controls">
+        <label>Allowance ₹
+          <input type="number" id="incomeInput" min="100" step="200" value="6000" />
+        </label>
+        <label>Save Goal ₹
+          <input type="number" id="goalInput" min="0" step="100" value="1500" />
+        </label>
+      </div>
+    </header>
+
+    <section class="hero motion-card">
+      <div>
+        <h2>Turn daily spends into <span class="grad-text">kinetic momentum.</span></h2>
+        <p>Live SVG motion waves, reactive cards, and instant SQLite sync with every tap.</p>
+        <div class="spark-wrap">
+          <span>Recent Spend Motion</span>
+          <svg id="sparkSvg" width="170" height="30" viewBox="0 0 170 30">
+            <polyline id="sparkLine" fill="none" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="4,24 45,16 86,20 126,9 166,14" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="pulse-panel">
+        <div class="pulse-top">
+          <span class="pulse-kicker">Budget Pulse</span>
+          <span class="pulse-badge" id="pulseBadge">Live Motion</span>
+        </div>
+        <div class="pulse-val" id="pulseLabel">Smooth Pace</div>
+        <div class="rail">
+          <div class="fill" id="pulseFill"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi motion-card">
+        <div class="k-lbl">This Week (Mon–Today)</div>
+        <div class="k-val" id="weekTotal">₹0</div>
+        <div class="k-sub" id="weekHint">Ready</div>
+      </div>
+      <div class="kpi motion-card">
+        <div class="k-lbl">This Month Spend</div>
+        <div class="k-val" id="monthTotal">₹0</div>
+        <div class="k-sub" id="monthHint">Within cap</div>
+      </div>
+      <div class="kpi motion-card">
+        <div class="k-lbl">Remaining Allowance</div>
+        <div class="k-val" id="remainingTotal">₹6,000</div>
+        <div class="k-sub" id="goalStatus">Target: ₹1,500</div>
+      </div>
+      <div class="kpi motion-card">
+        <div class="k-lbl">Avoidable Spend</div>
+        <div class="k-val" id="avoidableTotal">₹0</div>
+        <div class="k-sub" id="topLeakText">No leak yet</div>
+      </div>
+    </section>
+
+    <div class="chips">
+      <button class="chip" onclick="quickAdd('Tea / Snacks', 'Food & Snacks (Avoidable)', 25)">+ Tea / Snacks ₹25</button>
+      <button class="chip" onclick="quickAdd('Bus / Auto', 'Travel (Need)', 40)">+ Bus / Auto ₹40</button>
+      <button class="chip" onclick="quickAdd('Outside Food', 'Food & Snacks (Avoidable)', 120)">+ Outside Food ₹120</button>
+      <button class="chip" onclick="quickAdd('Print / Study', 'Academics (Need)', 50)">+ Print / Study ₹50</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="card motion-card">
+        <h3>Add Expense</h3>
+        <form id="expenseForm" class="form-grid">
+          <div class="field">
+            <label for="itemInput">Item / Note</label>
+            <input type="text" id="itemInput" placeholder="e.g., Snacks, Auto" required />
+          </div>
+          <div class="field">
+            <label for="amountInput">Amount (₹)</label>
+            <input type="number" id="amountInput" min="1" step="1" placeholder="50" required />
+          </div>
+          <div class="field">
+            <label for="categoryInput">Category</label>
+            <select id="categoryInput">
+              <option value="Food & Snacks (Avoidable)">Food & Snacks (Avoidable)</option>
+              <option value="Shopping / Fun (Avoidable)">Shopping / Fun (Avoidable)</option>
+              <option value="Travel (Need)">Travel (Need)</option>
+              <option value="Academics (Need)">Academics (Need)</option>
+              <option value="Essentials (Need)">Essentials (Need)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dateInput">Date</label>
+            <input type="date" id="dateInput" required />
+          </div>
+          <div class="field full">
+            <button type="submit" class="btn-go">Save Expense</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card motion-card">
+        <h3>What-If Simulator & Categories</h3>
+        <div class="sim-box">
+          <div style="display:flex; justify-content:space-between; font-size:0.84rem;">
+            <span>Trim avoidable spend by: <strong id="cutPctLabel">25%</strong></span>
+            <strong style="color:var(--mint);" id="simSavedLabel">+₹0 extra saved</strong>
+          </div>
+          <input type="range" id="cutSlider" min="0" max="80" step="5" value="25" />
+        </div>
+        <div id="categoryBars"></div>
+      </div>
+    </div>
+
+    <div class="card motion-card">
+      <div class="tx-head">
+        <h3>Transactions</h3>
+        <select id="filterSelect" style="background:var(--surface-2); color:var(--ink); border:1px solid var(--line); padding:7px 11px; border-radius:10px;">
+          <option value="ALL">All</option>
+          <option value="Avoidable">Avoidable Only</option>
+          <option value="Need">Needs Only</option>
+        </select>
+      </div>
+      <div class="tx-list" id="txList"></div>
+    </div>
+  </div>
+
+  <script>
+    const LOCAL_KEY = "Pocket La MOney_api_cache_v1";
+    const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+
+    function showToast(msg) {
+      const el = document.getElementById("toastPill");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+    }
+
+    document.querySelectorAll(".motion-card").forEach(card => {
+      card.addEventListener("mousemove", (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty("--mx", `${x}px`);
+        card.style.setProperty("--my", `${y}px`);
+        const rx = ((y / rect.height) - 0.5) * -3.5;
+        const ry = ((x / rect.width) - 0.5) * 3.5;
+        card.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-3px)`;
+      });
+      card.addEventListener("mouseleave", () => {
+        card.style.transform = "";
+      });
+    });
+
+    function sanitize(str) {
+      let s = String(str || "").trim().replace(/\s+/g, " ");
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return s.slice(0, 80);
+    }
+
+    function todayISO() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    let state = { income: 6000, goal: 1500, expenses: [] };
+    try {
+      const cached = JSON.parse(localStorage.getItem(LOCAL_KEY));
+      if (cached && Array.isArray(cached.expenses)) state = cached;
+    } catch (_) {}
+
+    const incomeInput = document.getElementById("incomeInput");
+    const goalInput = document.getElementById("goalInput");
+    const dateInput = document.getElementById("dateInput");
+    const cutSlider = document.getElementById("cutSlider");
+    const filterSelect = document.getElementById("filterSelect");
+    const syncStatus = document.getElementById("syncStatus");
+
+    dateInput.value = todayISO();
+
+    function saveCache() {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    }
+
+    async function syncFromBackend() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        state = {
+          income: Number(data.income) || 6000,
+          goal: Number(data.goal) || 1500,
+          expenses: Array.isArray(data.expenses) ? data.expenses : []
+        };
+        incomeInput.value = state.income;
+        goalInput.value = state.goal;
+        saveCache();
+        syncStatus.textContent = "Connected to Python + SQLite (fintrack.db)";
+        render();
+      } catch (_) {
+        incomeInput.value = state.income;
+        goalInput.value = state.goal;
+        syncStatus.textContent = "Offline mode (run uvicorn app:app --reload for SQLite)";
+        render();
+      }
+    }
+
+    async function pushSettings() {
+      const inc = Math.max(100, Number(incomeInput.value) || 100);
+      const gol = Math.max(0, Number(goalInput.value) || 0);
+      state.income = inc;
+      state.goal = Math.min(gol, inc);
+      saveCache();
+      render();
+      try {
+        await fetch(`${API_BASE}/api/settings`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ monthly_income: inc, savings_goal: gol })
+        });
+        showToast("Budget targets saved");
+      } catch (_) {}
+    }
+
+    async function addExpense(item, category, amount, expDate) {
+      const cleanItem = sanitize(item);
+      const amt = Number(amount);
+      if (!cleanItem || !Number.isFinite(amt) || amt <= 0) return;
+
+      const payload = {
+        item: cleanItem,
+        category,
+        amount: Math.round(amt * 100) / 100,
+        exp_date: expDate || todayISO()
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/expenses`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          await syncFromBackend();
+          showToast(`Added ₹${Math.round(payload.amount)} • ${cleanItem}`);
+          return;
+        }
+      } catch (_) {}
+
+      state.expenses.unshift({ id: Date.now(), ...payload });
+      saveCache();
+      render();
+      showToast(`Added ₹${Math.round(payload.amount)} • ${cleanItem}`);
+    }
+
+    window.quickAdd = (item, category, amount) => addExpense(item, category, amount, todayISO());
+
+    window.deleteTx = async (id) => {
+      try {
+        const res = await fetch(`${API_BASE}/api/expenses/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          await syncFromBackend();
+          showToast("Transaction removed");
+          return;
+        }
+      } catch (_) {}
+      state.expenses = state.expenses.filter(e => String(e.id) !== String(id));
+      saveCache();
+      render();
+      showToast("Transaction removed");
+    };
+
+    document.getElementById("expenseForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      addExpense(
+        document.getElementById("itemInput").value,
+        document.getElementById("categoryInput").value,
+        document.getElementById("amountInput").value,
+        dateInput.value
+      );
+      document.getElementById("itemInput").value = "";
+      document.getElementById("amountInput").value = "";
+    });
+
+    incomeInput.addEventListener("change", pushSettings);
+    goalInput.addEventListener("change", pushSettings);
+    cutSlider.addEventListener("input", render);
+    filterSelect.addEventListener("change", render);
+
+    function updateSparkline(recentAmounts) {
+      const line = document.getElementById("sparkLine");
+      if (!recentAmounts.length) {
+        line.setAttribute("points", "4,24 45,22 86,24 126,22 166,24");
+        return;
+      }
+      const slice = recentAmounts.slice(0, 7).reverse();
+      const maxA = Math.max(...slice, 1);
+      const stepX = slice.length > 1 ? 160 / (slice.length - 1) : 0;
+      const pts = slice.map((v, idx) => {
+        const x = (5 + idx * stepX).toFixed(1);
+        const y = (26 - (v / maxA) * 20).toFixed(1);
+        return `${x},${y}`;
+      });
+      line.setAttribute("points", pts.join(" "));
+    }
+
+    function render() {
+      const safeGoal = Math.min(state.goal, state.income);
+      const spendCap = Math.max(100, state.income - safeGoal);
+      const weeklyTarget = spendCap / 4.33;
+
+      const now = new Date();
+      const dayOfWeek = (now.getDay() + 6) % 7;
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      let weekSpend = 0, monthSpend = 0, avoidableSpend = 0;
+      const byCat = {};
+
+      for (const e of state.expenses) {
+        const rawDate = e.exp_date || e.date || "";
+        const parts = rawDate.split("-");
+        if (parts.length !== 3) continue;
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (isNaN(d.getTime())) continue;
+
+        const amt = Number(e.amount) || 0;
+        if (d >= weekStart && d <= now) weekSpend += amt;
+        if (d >= monthStart && d <= now) {
+          monthSpend += amt;
+          byCat[e.category] = (byCat[e.category] || 0) + amt;
+          if (String(e.category).includes("Avoidable")) avoidableSpend += amt;
+        }
+      }
+
+      updateSparkline(state.expenses.map(e => Number(e.amount) || 0));
+
+      const remaining = Math.max(0, state.income - monthSpend);
+      const pctBar = Math.min(100, Math.round((monthSpend / spendCap) * 100));
+
+      document.getElementById("weekTotal").textContent = `₹${Math.round(weekSpend).toLocaleString("en-IN")}`;
+      const weekHint = document.getElementById("weekHint");
+      if (weekSpend > weeklyTarget) {
+        weekHint.textContent = `₹${Math.round(weekSpend - weeklyTarget)} over pace`;
+        weekHint.style.color = "var(--danger)";
+      } else {
+        weekHint.textContent = `₹${Math.round(weeklyTarget - weekSpend)} safe this week`;
+        weekHint.style.color = "var(--mint)";
+      }
+
+      document.getElementById("monthTotal").textContent = `₹${Math.round(monthSpend).toLocaleString("en-IN")}`;
+      document.getElementById("monthHint").textContent = `Cap: ₹${Math.round(spendCap).toLocaleString("en-IN")}`;
+      document.getElementById("remainingTotal").textContent = `₹${Math.round(remaining).toLocaleString("en-IN")}`;
+      document.getElementById("goalStatus").textContent = `Target savings: ₹${Math.round(safeGoal).toLocaleString("en-IN")}`;
+      document.getElementById("avoidableTotal").textContent = `₹${Math.round(avoidableSpend).toLocaleString("en-IN")}`;
+
+      const entries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+      document.getElementById("topLeakText").textContent = entries.length
+        ? `Top: ${entries[0][0].split(" (")[0]} (₹${Math.round(entries[0][1])})`
+        : "No monthly spend yet";
+
+      document.getElementById("pulseFill").style.width = `${pctBar}%`;
+      document.getElementById("pulseLabel").textContent =
+        pctBar < 60 ? "Smooth Pace" : pctBar < 90 ? "Watch Burn Rate" : "Cap Reached";
+
+      const cutPct = Number(cutSlider.value);
+      const extraSaved = Math.round(avoidableSpend * (cutPct / 100));
+      document.getElementById("cutPctLabel").textContent = `${cutPct}%`;
+      document.getElementById("simSavedLabel").textContent = `+₹${extraSaved.toLocaleString("en-IN")} extra saved`;
+
+      const barsEl = document.getElementById("categoryBars");
+      if (!entries.length) {
+        barsEl.innerHTML = `<p style="color:var(--muted); font-size:0.86rem;">Add an expense to see category bars.</p>`;
+      } else {
+        const maxVal = entries[0][1] || 1;
+        barsEl.innerHTML = entries.map(([cat, val]) => {
+          const w = Math.max(6, Math.round((val / maxVal) * 100));
+          return `
+            <div class="cat-row">
+              <div class="cat-top"><span>${cat}</span><strong>₹${Math.round(val).toLocaleString("en-IN")}</strong></div>
+              <div class="cat-rail"><div class="cat-fill" style="width:${w}%"></div></div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      const mode = filterSelect.value;
+      const filtered = state.expenses.filter(e => {
+        if (mode === "Avoidable") return String(e.category).includes("Avoidable");
+        if (mode === "Need") return String(e.category).includes("Need");
+        return true;
+      });
+
+      const listEl = document.getElementById("txList");
+      if (!filtered.length) {
+        listEl.innerHTML = `<p style="color:var(--muted); font-size:0.86rem;">No matching transactions yet.</p>`;
+      } else {
+        listEl.innerHTML = filtered.slice(0, 30).map(e => `
+          <div class="tx-row">
+            <div>
+              <strong>${e.item}</strong>
+              <small>${e.exp_date || e.date} • ${e.category}</small>
+            </div>
+            <div class="tx-right">
+              <span class="tx-amt">₹${Number(e.amount).toLocaleString("en-IN")}</span>
+              <button class="del-btn" onclick="deleteTx('${e.id}')">Delete</button>
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+
+    syncFromBackend();
+  </script>
+</body>
+</html>
