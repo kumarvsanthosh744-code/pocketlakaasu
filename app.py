@@ -20,7 +20,6 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
-        # Check if old single-user settings table exists without device_id
         cols = [r["name"] for r in conn.execute("PRAGMA table_info(settings)").fetchall()]
         if cols and "device_id" not in cols:
             conn.execute("DROP TABLE settings")
@@ -76,6 +75,12 @@ class ExpenseIn(BaseModel):
 class SettingsIn(BaseModel):
     monthly_income: float = Field(..., ge=100)
     savings_goal: float = Field(..., ge=0)
+
+
+class DeviceBackupIn(BaseModel):
+    monthly_income: float = Field(default=6000.0, ge=100)
+    savings_goal: float = Field(default=1500.0, ge=0)
+    expenses: list[ExpenseIn] = Field(default_factory=list)
 
 
 @app.get("/")
@@ -162,6 +167,51 @@ def create_expense(payload: ExpenseIn, device_id: str = Depends(require_device_i
         )
         new_id = cur.lastrowid
     return JSONResponse(status_code=201, content={"id": new_id, "ok": True})
+
+
+@app.post("/api/restore")
+def restore_device_data(payload: DeviceBackupIn, device_id: str = Depends(require_device_id)):
+    safe_goal = min(payload.savings_goal, payload.monthly_income)
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM expenses WHERE device_id = ?",
+            (device_id,),
+        ).fetchone()
+        if existing["cnt"] == 0 and payload.expenses:
+            conn.execute(
+                """
+                INSERT INTO settings (device_id, monthly_income, savings_goal)
+                VALUES (?, ?, ?)
+                ON CONFLICT(device_id) DO UPDATE SET
+                    monthly_income = excluded.monthly_income,
+                    savings_goal = excluded.savings_goal
+                """,
+                (device_id, float(payload.monthly_income), float(safe_goal)),
+            )
+            for exp in payload.expenses[:200]:
+                clean_item = sanitize_text(exp.item)
+                if not clean_item or exp.amount <= 0:
+                    continue
+                exp_str = exp.exp_date or date.today().isoformat()
+                try:
+                    datetime.strptime(exp_str, "%Y-%m-%d")
+                except ValueError:
+                    exp_str = date.today().isoformat()
+                conn.execute(
+                    """
+                    INSERT INTO expenses (device_id, item, category, amount, exp_date, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        device_id,
+                        clean_item,
+                        exp.category[:60],
+                        round(float(exp.amount), 2),
+                        exp_str,
+                        datetime.utcnow().isoformat(),
+                    ),
+                )
+    return {"ok": True}
 
 
 @app.delete("/api/expenses/{expense_id}")

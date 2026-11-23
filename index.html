@@ -153,7 +153,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     .brand { display: flex; align-items: center; gap: 12px; }
@@ -222,6 +222,45 @@
     .budget-controls input:focus {
       border-color: var(--violet);
       transform: scale(1.03);
+    }
+
+    .month-banner {
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(120deg, rgba(109, 40, 217, 0.08), rgba(8, 145, 178, 0.08));
+    }
+
+    .month-compare {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .month-pill {
+      background: var(--surface-solid);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 9px 14px;
+    }
+
+    .month-pill small {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .month-pill strong {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.08rem;
     }
 
     .motion-card {
@@ -456,6 +495,12 @@
       margin-bottom: 12px;
     }
 
+    .tx-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
 
     .tx-row {
@@ -552,7 +597,7 @@
         <div class="logo-tile">P</div>
         <div>
           <h1>PocketLakaasu</h1>
-          <p id="syncStatus">Connecting to personal device storage...</p>
+          <p id="syncStatus">Loading your device storage...</p>
         </div>
       </div>
 
@@ -565,6 +610,23 @@
         </label>
       </div>
     </header>
+
+    <section class="month-banner motion-card">
+      <div>
+        <strong id="monthCycleTitle" style="font-family:'Space Grotesk',sans-serif; font-size:1rem;">Monthly Cycle</strong>
+        <p id="monthCycleNote" style="font-size:0.82rem; color:var(--muted); margin-top:2px;"></p>
+      </div>
+      <div class="month-compare">
+        <div class="month-pill">
+          <small id="oldMonthLabel">Old Month Expenses</small>
+          <strong id="oldMonthTotal" style="color:var(--muted);">₹0</strong>
+        </div>
+        <div class="month-pill">
+          <small id="newMonthLabel">Current Month Expenses</small>
+          <strong id="newMonthTotal" style="color:var(--violet);">₹0</strong>
+        </div>
+      </div>
+    </section>
 
     <section class="hero motion-card">
       <div>
@@ -597,7 +659,7 @@
         <div class="k-sub" id="weekHint">Ready</div>
       </div>
       <div class="kpi motion-card">
-        <div class="k-lbl">This Month Spend</div>
+        <div class="k-lbl" id="monthKpiLabel">This Month Spend</div>
         <div class="k-val" id="monthTotal">₹0</div>
         <div class="k-sub" id="monthHint">Within cap</div>
       </div>
@@ -668,11 +730,18 @@
     <div class="card motion-card">
       <div class="tx-head">
         <h3>Transactions</h3>
-        <select id="filterSelect" style="background:var(--surface-2); color:var(--ink); border:1px solid var(--line); padding:7px 11px; border-radius:10px;">
-          <option value="ALL">All</option>
-          <option value="Avoidable">Avoidable Only</option>
-          <option value="Need">Needs Only</option>
-        </select>
+        <div class="tx-filters">
+          <select id="monthSelect" style="background:var(--surface-2); color:var(--ink); border:1px solid var(--line); padding:7px 11px; border-radius:10px;">
+            <option value="CURRENT">Current Month</option>
+            <option value="PREVIOUS">Old Month (Previous)</option>
+            <option value="ALL">All Months</option>
+          </select>
+          <select id="filterSelect" style="background:var(--surface-2); color:var(--ink); border:1px solid var(--line); padding:7px 11px; border-radius:10px;">
+            <option value="ALL">All Types</option>
+            <option value="Avoidable">Avoidable Only</option>
+            <option value="Need">Needs Only</option>
+          </select>
+        </div>
       </div>
       <div class="tx-list" id="txList"></div>
     </div>
@@ -692,6 +761,7 @@
 
     const DEVICE_ID = getDeviceId();
     const LOCAL_KEY = `pocketlakaasu_cache_${DEVICE_ID}`;
+    const LAST_MONTH_KEY = `pocketlakaasu_last_seen_month_${DEVICE_ID}`;
     const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
 
     function apiFetch(url, options = {}) {
@@ -707,7 +777,7 @@
       el.textContent = msg;
       el.classList.add("show");
       clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+      window._toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
     }
 
     document.querySelectorAll(".motion-card").forEach(card => {
@@ -740,16 +810,34 @@
       return `${y}-${m}-${day}`;
     }
 
+    function getMonthKey(dateObj) {
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function getMonthLabel(ymStr) {
+      const [y, m] = ymStr.split("-").map(Number);
+      if (!y || !m) return ymStr;
+      const d = new Date(y, m - 1, 1);
+      return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+    }
+
     let state = { income: 6000, goal: 1500, expenses: [] };
     try {
       const cached = JSON.parse(localStorage.getItem(LOCAL_KEY));
-      if (cached && Array.isArray(cached.expenses)) state = cached;
+      if (cached && typeof cached === "object") {
+        state = {
+          income: Number(cached.income) || 6000,
+          goal: Number(cached.goal) || 1500,
+          expenses: Array.isArray(cached.expenses) ? cached.expenses : []
+        };
+      }
     } catch (_) {}
 
     const incomeInput = document.getElementById("incomeInput");
     const goalInput = document.getElementById("goalInput");
     const dateInput = document.getElementById("dateInput");
     const cutSlider = document.getElementById("cutSlider");
+    const monthSelect = document.getElementById("monthSelect");
     const filterSelect = document.getElementById("filterSelect");
     const syncStatus = document.getElementById("syncStatus");
 
@@ -759,25 +847,68 @@
       localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
     }
 
+    function checkNewMonthRefresh() {
+      const now = new Date();
+      const currentYM = getMonthKey(now);
+      const prevSeenYM = localStorage.getItem(LAST_MONTH_KEY);
+      if (prevSeenYM && prevSeenYM !== currentYM) {
+        monthSelect.value = "CURRENT";
+        showToast(`New month ${getMonthLabel(currentYM)} — showing your new month expenses`);
+      }
+      localStorage.setItem(LAST_MONTH_KEY, currentYM);
+    }
+
     async function syncFromBackend() {
+      checkNewMonthRefresh();
       try {
         const res = await apiFetch(`${API_BASE}/api/state`);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
-        state = {
-          income: Number(data.income) || 6000,
-          goal: Number(data.goal) || 1500,
-          expenses: Array.isArray(data.expenses) ? data.expenses : []
-        };
+
+        const serverExpenses = Array.isArray(data.expenses) ? data.expenses : [];
+        const serverIncome = Number(data.income) || 6000;
+        const serverGoal = Number(data.goal) || 1500;
+
+        const localHasExpenses = Array.isArray(state.expenses) && state.expenses.length > 0;
+        const localHasCustomTargets = Number(state.income) !== 6000 || Number(state.goal) !== 1500;
+        const serverLooksDefault = serverExpenses.length === 0 && serverIncome === 6000 && serverGoal === 1500;
+
+        if (serverExpenses.length > 0 || !serverLooksDefault || (!localHasExpenses && !localHasCustomTargets)) {
+          state = {
+            income: serverIncome,
+            goal: serverGoal,
+            expenses: serverExpenses
+          };
+          saveCache();
+        } else {
+          // Server had no records for this device (e.g., after container restart): restore from device storage
+          await apiFetch(`${API_BASE}/api/restore`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              monthly_income: state.income,
+              savings_goal: state.goal,
+              expenses: state.expenses
+            })
+          });
+          const refreshed = await apiFetch(`${API_BASE}/api/state`);
+          if (refreshed.ok) {
+            const rData = await refreshed.json();
+            if (Array.isArray(rData.expenses) && rData.expenses.length > 0) {
+              state.expenses = rData.expenses;
+              saveCache();
+            }
+          }
+        }
+
         incomeInput.value = state.income;
         goalInput.value = state.goal;
-        saveCache();
         syncStatus.textContent = `Private Device Storage • ID ${DEVICE_ID.slice(0, 8)}`;
         render();
       } catch (_) {
         incomeInput.value = state.income;
         goalInput.value = state.goal;
-        syncStatus.textContent = `Local Device Storage • ID ${DEVICE_ID.slice(0, 8)}`;
+        syncStatus.textContent = `Device Storage (Offline) • ID ${DEVICE_ID.slice(0, 8)}`;
         render();
       }
     }
@@ -836,7 +967,9 @@
       try {
         const res = await apiFetch(`${API_BASE}/api/expenses/${id}`, { method: "DELETE" });
         if (res.ok) {
-          await syncFromBackend();
+          state.expenses = state.expenses.filter(e => String(e.id) !== String(id));
+          saveCache();
+          render();
           showToast("Transaction removed");
           return;
         }
@@ -862,6 +995,7 @@
     incomeInput.addEventListener("change", pushSettings);
     goalInput.addEventListener("change", pushSettings);
     cutSlider.addEventListener("input", render);
+    monthSelect.addEventListener("change", render);
     filterSelect.addEventListener("change", render);
 
     function updateSparkline(recentAmounts) {
@@ -887,12 +1021,20 @@
       const weeklyTarget = spendCap / 4.33;
 
       const now = new Date();
+      const currentYM = getMonthKey(now);
+      const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const previousYM = getMonthKey(prevMonthDate);
+
       const dayOfWeek = (now.getDay() + 6) % 7;
       const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      let weekSpend = 0, monthSpend = 0, avoidableSpend = 0;
+      let weekSpend = 0;
+      let currentMonthSpend = 0;
+      let previousMonthSpend = 0;
+      let avoidableSpend = 0;
       const byCat = {};
+
+      const taggedExpenses = [];
 
       for (const e of state.expenses) {
         const rawDate = e.exp_date || e.date || "";
@@ -902,18 +1044,40 @@
         if (isNaN(d.getTime())) continue;
 
         const amt = Number(e.amount) || 0;
+        const ym = getMonthKey(d);
+        const isCurrentMonth = ym === currentYM;
+        const isPreviousMonth = ym === previousYM;
+
+        taggedExpenses.push({ ...e, _ym: ym, _isCurrentMonth: isCurrentMonth, _isPreviousMonth: isPreviousMonth });
+
         if (d >= weekStart && d <= now) weekSpend += amt;
-        if (d >= monthStart && d <= now) {
-          monthSpend += amt;
+        if (isPreviousMonth) previousMonthSpend += amt;
+        if (isCurrentMonth) {
+          currentMonthSpend += amt;
           byCat[e.category] = (byCat[e.category] || 0) + amt;
           if (String(e.category).includes("Avoidable")) avoidableSpend += amt;
         }
       }
 
-      updateSparkline(state.expenses.map(e => Number(e.amount) || 0));
+      const currentLabelText = getMonthLabel(currentYM);
+      const prevLabelText = getMonthLabel(previousYM);
 
-      const remaining = Math.max(0, state.income - monthSpend);
-      const pctBar = Math.min(100, Math.round((monthSpend / spendCap) * 100));
+      document.getElementById("monthCycleTitle").textContent = `${currentLabelText} — New Month Active View`;
+      document.getElementById("monthCycleNote").textContent =
+        `Old month (${prevLabelText}) expenses are separated below so your new month (${currentLabelText}) starts with a clear monthly view.`;
+      document.getElementById("oldMonthLabel").textContent = `Old Month (${prevLabelText}) Expenses`;
+      document.getElementById("newMonthLabel").textContent = `Current Month (${currentLabelText}) Expenses`;
+      document.getElementById("oldMonthTotal").textContent = `₹${Math.round(previousMonthSpend).toLocaleString("en-IN")}`;
+      document.getElementById("newMonthTotal").textContent = `₹${Math.round(currentMonthSpend).toLocaleString("en-IN")}`;
+      document.getElementById("monthKpiLabel").textContent = `${currentLabelText} Spend`;
+
+      const currentMonthAmounts = taggedExpenses
+        .filter(x => x._isCurrentMonth)
+        .map(x => Number(x.amount) || 0);
+      updateSparkline(currentMonthAmounts);
+
+      const remaining = Math.max(0, state.income - currentMonthSpend);
+      const pctBar = Math.min(100, Math.round((currentMonthSpend / spendCap) * 100));
 
       document.getElementById("weekTotal").textContent = `₹${Math.round(weekSpend).toLocaleString("en-IN")}`;
       const weekHint = document.getElementById("weekHint");
@@ -925,7 +1089,7 @@
         weekHint.style.color = "var(--mint)";
       }
 
-      document.getElementById("monthTotal").textContent = `₹${Math.round(monthSpend).toLocaleString("en-IN")}`;
+      document.getElementById("monthTotal").textContent = `₹${Math.round(currentMonthSpend).toLocaleString("en-IN")}`;
       document.getElementById("monthHint").textContent = `Cap: ₹${Math.round(spendCap).toLocaleString("en-IN")}`;
       document.getElementById("remainingTotal").textContent = `₹${Math.round(remaining).toLocaleString("en-IN")}`;
       document.getElementById("goalStatus").textContent = `Target savings: ₹${Math.round(safeGoal).toLocaleString("en-IN")}`;
@@ -934,7 +1098,7 @@
       const entries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
       document.getElementById("topLeakText").textContent = entries.length
         ? `Top: ${entries[0][0].split(" (")[0]} (₹${Math.round(entries[0][1])})`
-        : "No monthly spend yet";
+        : `No ${currentLabelText} spend yet`;
 
       document.getElementById("pulseFill").style.width = `${pctBar}%`;
       document.getElementById("pulseLabel").textContent =
@@ -947,7 +1111,7 @@
 
       const barsEl = document.getElementById("categoryBars");
       if (!entries.length) {
-        barsEl.innerHTML = `<p style="color:var(--muted); font-size:0.86rem;">Add an expense to see category bars.</p>`;
+        barsEl.innerHTML = `<p style="color:var(--muted); font-size:0.86rem;">No ${currentLabelText} expenses yet — add one to see category bars.</p>`;
       } else {
         const maxVal = entries[0][1] || 1;
         barsEl.innerHTML = entries.map(([cat, val]) => {
@@ -961,29 +1125,41 @@
         }).join("");
       }
 
-      const mode = filterSelect.value;
-      const filtered = state.expenses.filter(e => {
-        if (mode === "Avoidable") return String(e.category).includes("Avoidable");
-        if (mode === "Need") return String(e.category).includes("Need");
+      const monthMode = monthSelect.value;
+      const typeMode = filterSelect.value;
+
+      const filtered = taggedExpenses.filter(e => {
+        if (monthMode === "CURRENT" && !e._isCurrentMonth) return false;
+        if (monthMode === "PREVIOUS" && !e._isPreviousMonth) return false;
+        if (typeMode === "Avoidable") return String(e.category).includes("Avoidable");
+        if (typeMode === "Need") return String(e.category).includes("Need");
         return true;
       });
 
       const listEl = document.getElementById("txList");
       if (!filtered.length) {
-        listEl.innerHTML = `<p style="color:var(--muted); font-size:0.86rem;">No matching transactions yet.</p>`;
+        const emptyMsg = monthMode === "CURRENT"
+          ? `No expenses logged yet for ${currentLabelText} (new month).`
+          : monthMode === "PREVIOUS"
+            ? `No expenses found for old month (${prevLabelText}).`
+            : "No matching transactions yet.";
+        listEl.innerHTML = `<p style="color:var(--muted); font-size:0.86rem;">${emptyMsg}</p>`;
       } else {
-        listEl.innerHTML = filtered.slice(0, 30).map(e => `
-          <div class="tx-row">
-            <div>
-              <strong>${e.item}</strong>
-              <small>${e.exp_date || e.date} • ${e.category}</small>
+        listEl.innerHTML = filtered.slice(0, 40).map(e => {
+          const tag = e._isCurrentMonth ? `${currentLabelText} (Current)` : `${getMonthLabel(e._ym)} (Old Month)`;
+          return `
+            <div class="tx-row">
+              <div>
+                <strong>${e.item}</strong>
+                <small>${e.exp_date || e.date} • ${e.category} • ${tag}</small>
+              </div>
+              <div class="tx-right">
+                <span class="tx-amt">₹${Number(e.amount).toLocaleString("en-IN")}</span>
+                <button class="btn-del" onclick="deleteTx('${e.id}')">Delete</button>
+              </div>
             </div>
-            <div class="tx-right">
-              <span class="tx-amt">₹${Number(e.amount).toLocaleString("en-IN")}</span>
-              <button class="btn-del" onclick="deleteTx('${e.id}')">Delete</button>
-            </div>
-          </div>
-        `).join("");
+          `;
+        }).join("");
       }
     }
 
